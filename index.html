@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <title>Socket.IO Chat</title>
+    <title>Chat App</title>
 
     <style>
       * {
@@ -112,19 +112,17 @@
         margin: 4px 0 10px;
       }
 
-      /* ensure the bubble in self rows aligns to the right */
       .msg-row {
         display: grid;
-        grid-template-columns: 36px 1fr; /* incoming: avatar | bubble */
-        justify-items: start; /* default left */
+        grid-template-columns: 36px 1fr;
+        justify-items: start;
       }
 
       .msg-row.self {
-        grid-template-columns: 1fr 36px; /* self: bubble | avatar */
-        justify-items: end; /* push items to right edge */
+        grid-template-columns: 1fr 36px;
+        justify-items: end;
       }
 
-      /* be explicit for the bubble itself */
       .msg-row .msg-bubble {
         justify-self: start;
       }
@@ -132,7 +130,6 @@
         justify-self: end;
       }
 
-      /* keep avatars stuck to their respective sides */
       .msg-row .msg-avatar {
         justify-self: start;
       }
@@ -277,7 +274,6 @@
         display: none;
       }
 
-
       @media (max-width: 640px) {
         body {
           padding: 10px;
@@ -305,7 +301,6 @@
 
       <main id="messages" class="chat-body">
         <div class="day-divider">Today</div>
-
       </main>
 
       <footer class="chat-footer">
@@ -324,7 +319,6 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-
       const socket = io();
 
       const form = document.getElementById("form");
@@ -370,11 +364,9 @@
         bubble.appendChild(content);
 
         if (self) {
-
           row.appendChild(bubble);
           row.appendChild(avatar);
         } else {
-
           row.appendChild(avatar);
           row.appendChild(bubble);
         }
@@ -404,11 +396,9 @@
 
       // Receive message
       socket.on("chat message", function (msg) {
-
         const last = messages.lastElementChild;
         const lastIsSelf = last?.classList.contains("self");
         if (lastIsSelf) {
-
           const lastText =
             last.querySelector(".msg-bubble")?.lastChild?.textContent || "";
           if (lastText === String(msg)) return;
