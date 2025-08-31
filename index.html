@@ -1,88 +1,420 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-    <title>Socket.IO chat</title>
+    <title>Socket.IO Chat</title>
+
     <style>
+      * {
+        margin: 0px;
+        padding: 0px;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --bg: #0b0f1a;
+        --bg2: #0f1424;
+        --glass: rgba(255, 255, 255, 0.08);
+        --glass-strong: rgba(255, 255, 255, 0.12);
+        --text: #e8eefc;
+        --muted: #a6b3d8;
+        --primary: #4f8cff;
+        --primary-weak: rgba(79, 140, 255, 0.18);
+        --incoming: #151b2d;
+        --outgoing: #1e2a4a;
+        --success: #22c55e;
+        --danger: #ef4444;
+        --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        --radius: 16px;
+        --radius-sm: 12px;
+      }
+
       body {
         margin: 0;
-        padding-bottom: 3rem;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          Helvetica, Arial, sans-serif;
+        min-height: 100vh;
+        color: var(--text);
+        background: radial-gradient(
+            1200px 800px at 10% -10%,
+            #21315d 0%,
+            transparent 60%
+          ),
+          radial-gradient(900px 700px at 110% 20%, #1b3a8a 0%, transparent 60%),
+          linear-gradient(180deg, var(--bg), var(--bg2));
+        font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica,
+          Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        display: grid;
+        place-items: center;
+        padding: 24px;
       }
 
-      #form {
-        background: rgba(0, 0, 0, 0.15);
-        padding: 0.25rem;
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        display: flex;
-        height: 3rem;
-        box-sizing: border-box;
-        backdrop-filter: blur(10px);
+      .chat-wrap {
+        width: min(85vw, 100%);
+        height: min(85vh, 920px);
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        background: var(--glass);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 1.5rem;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px); /* Safari */
+        overflow: hidden;
       }
+
+      .chat-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 18px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.08),
+          rgba(255, 255, 255, 0.02)
+        );
+      }
+      .chat-header .avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(var(--primary), #9b59ff);
+        border: 2px solid rgba(255, 255, 255, 0.25);
+      }
+      .chat-header .title {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.3;
+      }
+      .chat-header .title strong {
+        letter-spacing: 0.5px;
+      }
+      .chat-header .title span {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .chat-body {
+        overflow-y: auto;
+        padding: 18px 14px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        scroll-behavior: smooth;
+      }
+      .day-divider {
+        align-self: center;
+        color: var(--muted);
+        font-size: 12px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        margin: 4px 0 10px;
+      }
+
+      /* ensure the bubble in self rows aligns to the right */
+      .msg-row {
+        display: grid;
+        grid-template-columns: 36px 1fr; /* incoming: avatar | bubble */
+        justify-items: start; /* default left */
+      }
+
+      .msg-row.self {
+        grid-template-columns: 1fr 36px; /* self: bubble | avatar */
+        justify-items: end; /* push items to right edge */
+      }
+
+      /* be explicit for the bubble itself */
+      .msg-row .msg-bubble {
+        justify-self: start;
+      }
+      .msg-row.self .msg-bubble {
+        justify-self: end;
+      }
+
+      /* keep avatars stuck to their respective sides */
+      .msg-row .msg-avatar {
+        justify-self: start;
+      }
+      .msg-row.self .msg-avatar {
+        justify-self: end;
+      }
+
+      .msg-row {
+        display: grid;
+        grid-template-columns: 36px 1fr;
+        gap: 10px;
+        align-items: end;
+        padding: 2px 6px;
+      }
+      .msg-row.self {
+        grid-template-columns: 1fr 36px;
+      }
+      .msg-row .msg-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #233055;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+      .msg-bubble {
+        max-width: 70ch;
+        width: fit-content;
+        padding: 10px 12px;
+        border-radius: var(--radius-sm);
+        position: relative;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        line-height: 1.35;
+      }
+      .incoming .msg-bubble {
+        background: var(--incoming);
+        border-top-left-radius: 6px;
+      }
+      .self .msg-bubble {
+        background: var(--outgoing);
+        border-top-right-radius: 6px;
+        outline: 1px solid var(--primary-weak);
+      }
+
+      .meta {
+        display: flex;
+        gap: 8px;
+        align-items: baseline;
+        margin-bottom: 2px;
+      }
+      .meta .name {
+        font-weight: 600;
+        font-size: 13px;
+        color: #b8c7ff;
+      }
+      .meta .time {
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .chat-footer {
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        padding: 12px;
+        background: linear-gradient(
+          0deg,
+          rgba(0, 0, 0, 0.12),
+          rgba(255, 255, 255, 0.02)
+        );
+      }
+      #form {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        align-items: center;
+        margin: 0;
+      }
+      .composer-btn {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        background: var(--glass-strong);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        color: var(--text);
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        transition: transform 0.12s ease, background 0.2s ease,
+          border-color 0.2s ease;
+      }
+      .composer-btn:hover {
+        transform: translateY(-1px);
+        background: rgba(255, 255, 255, 0.18);
+        border-color: rgba(255, 255, 255, 0.22);
+      }
+
       #input {
-        border: none;
-        padding: 0 1rem;
-        flex-grow: 1;
-        border-radius: 2rem;
-        margin: 0.25rem;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+        height: 42px;
+        padding: 0 14px;
+        border-radius: 14px;
+        outline: none;
+        width: 100%;
+        transition: border-color 0.2s ease, background 0.2s ease,
+          box-shadow 0.2s ease;
+      }
+      #input::placeholder {
+        color: #9aa7cc;
       }
       #input:focus {
-        outline: none;
-      }
-      #form > button {
-        background: #333;
-        border: none;
-        padding: 0 1rem;
-        margin: 0.25rem;
-        border-radius: 3px;
-        outline: none;
-        color: #fff;
+        border-color: rgba(79, 140, 255, 0.6);
+        background: rgba(255, 255, 255, 0.1);
+        box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.18);
       }
 
-      #messages {
-        list-style-type: none;
-        margin: 0;
-        padding: 0;
+      #sendBtn {
+        background: linear-gradient(135deg, var(--primary), #9b59ff);
+        border: 0;
+        color: #fff;
+        padding: 0 18px;
+        height: 42px;
+        border-radius: 14px;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+        cursor: pointer;
+        transition: transform 0.12s ease, box-shadow 0.2s ease;
+        box-shadow: 0 10px 24px rgba(79, 140, 255, 0.35);
       }
-      #messages > li {
-        padding: 0.5rem 1rem;
+      #sendBtn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 30px rgba(79, 140, 255, 0.45);
       }
-      #messages > li:nth-child(odd) {
-        background: #efefef;
+      #sendBtn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+
+      @media (max-width: 640px) {
+        body {
+          padding: 10px;
+        }
+        .chat-wrap {
+          height: calc(100vh - 20px);
+        }
+        .msg-bubble {
+          max-width: 88vw;
+        }
       }
     </style>
+    <link rel="stylesheet" href="./style.css" />
   </head>
+
   <body>
-    <ul id="messages"></ul>
-    <form id="form" action="">
-      <input id="input" autocomplete="off" /><button>Send</button>
-    </form>
-  </body>
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    var socket = io();
+    <div class="chat-wrap">
+      <header class="chat-header">
+        <div class="avatar"></div>
+        <div class="title">
+          <strong>Chat App</strong>
+          <span>Online</span>
+        </div>
+      </header>
 
-    var form = document.getElementById("form");
-    var input = document.getElementById("input");
-    var messages = document.getElementById("messages");
+      <main id="messages" class="chat-body">
+        <div class="day-divider">Today</div>
 
-    form.addEventListener("submit", function (e) {
-      e.preventDefault();
-      if (input.value) {
-        socket.emit("chat message", input.value);
-        input.value = "";
+      </main>
+
+      <footer class="chat-footer">
+        <form id="form" autocomplete="off">
+          <input
+            id="input"
+            name="message"
+            type="text"
+            placeholder="Write a message..."
+          />
+
+          <button id="sendBtn" type="submit">Send</button>
+        </form>
+      </footer>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+
+      const socket = io();
+
+      const form = document.getElementById("form");
+      const input = document.getElementById("input");
+      const sendBtn = document.getElementById("sendBtn");
+      const messages = document.getElementById("messages");
+
+      function formatTime(d = new Date()) {
+        const h = d.getHours();
+        const m = String(d.getMinutes());
+        const hr = h % 12 || 12;
+        const ampm = h >= 12 ? "PM" : "AM";
+        return hr + ":" + m + " " + ampm;
       }
-    });
 
-    socket.on("chat message", function (msg) {
-      var item = document.createElement("li");
-      item.textContent = msg;
-      messages.appendChild(item);
-      window.scrollTo(0, document.body.scrollHeight);
-    });
-  </script>
+      function createMessage({ text, name, self }) {
+        const row = document.createElement("div");
+        row.className = "msg-row " + (self ? "self" : "incoming");
+
+        const avatar = document.createElement("div");
+        avatar.className = "msg-avatar";
+        avatar.style.background = "linear-gradient(var(--primary), #9b59ff)";
+
+        const bubble = document.createElement("div");
+        bubble.className = "msg-bubble";
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        const nameEl = document.createElement("span");
+        nameEl.className = "name";
+        nameEl.textContent = name;
+        const timeEl = document.createElement("span");
+        timeEl.className = "time";
+        timeEl.textContent = formatTime();
+
+        meta.appendChild(nameEl);
+        meta.appendChild(timeEl);
+
+        const content = document.createElement("div");
+        content.textContent = text;
+
+        bubble.appendChild(meta);
+        bubble.appendChild(content);
+
+        if (self) {
+
+          row.appendChild(bubble);
+          row.appendChild(avatar);
+        } else {
+
+          row.appendChild(avatar);
+          row.appendChild(bubble);
+        }
+        return row;
+      }
+
+      function appendMessage(opts) {
+        const node = createMessage(opts);
+        messages.appendChild(node);
+        messages.scrollTop = messages.scrollHeight;
+      }
+
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const value = input.value.trim();
+        if (!value) return;
+        sendBtn.disabled = true;
+
+        socket.emit("chat message", value);
+
+        appendMessage({ text: value, name: "You", self: true });
+
+        input.value = "";
+        sendBtn.disabled = false;
+        input.focus();
+      });
+
+      // Receive message
+      socket.on("chat message", function (msg) {
+
+        const last = messages.lastElementChild;
+        const lastIsSelf = last?.classList.contains("self");
+        if (lastIsSelf) {
+
+          const lastText =
+            last.querySelector(".msg-bubble")?.lastChild?.textContent || "";
+          if (lastText === String(msg)) return;
+        }
+        appendMessage({ text: msg, name: "Guest", self: false });
+      });
+    </script>
+  </body>
 </html>
