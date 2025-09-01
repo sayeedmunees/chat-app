@@ -264,7 +264,7 @@
         box-shadow: 0 14px 30px rgba(79, 140, 255, 0.45);
       }
       #sendBtn:disabled {
-        opacity: 0.6;
+        opacity: 0.5;
         cursor: not-allowed;
         transform: none;
         box-shadow: none;
@@ -382,9 +382,8 @@
 
       form.addEventListener("submit", (e) => {
         e.preventDefault();
-        const value = input.value.trim();
+        const value = input.value;
         if (!value) return;
-        sendBtn.disabled = true;
 
         socket.emit("chat message", value);
 
